@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment Hero: Approve or Block!</title>
+  <style>
+    :root { --bg:#0b1020; --panel:#121a33; --text:#e9eeff; --muted:#aab3d6; }
+    html, body { height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: radial-gradient(1200px 800px at 70% 20%, #1b2a66, var(--bg)); color:var(--text); }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 16px; display:flex; flex-direction:column; gap: 12px; }
+    header { display:flex; align-items:flex-start; justify-content:space-between; gap: 12px; }
+    h1 { margin:0; font-size: 20px; letter-spacing:.2px; }
+    .sub { margin-top:4px; color:var(--muted); font-size: 13px; line-height: 1.35; }
+    .panel { background: rgba(18,26,51,.9); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    .topbar { display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+    .stat { padding:10px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); }
+    .stat .label { font-size: 12px; color: var(--muted); }
+    .stat .value { font-size: 18px; font-weight: 700; margin-top: 2px; }
+    .row { display:flex; gap: 12px; flex-wrap:wrap; }
+    .game { flex: 1 1 560px; }
+    .side { flex: 1 1 320px; display:flex; flex-direction:column; gap: 12px; }
+    canvas { width: 100%; height: auto; background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border-radius: 14px; border: 1px solid rgba(255,255,255,.08); display:block; }
+    .controls { display:flex; gap: 10px; flex-wrap:wrap; }
+    button {
+      cursor:pointer;
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 14px;
+      flex: 1 1 120px;
+      transition: transform .05s ease, background .2s ease;
+      user-select:none;
+    }
+    button:hover { background: rgba(255,255,255,.10); }
+    button:active { transform: translateY(1px); }
+    .approve { background: rgba(46, 204, 113, .14); border-color: rgba(46, 204, 113, .35); }
+    .block { background: rgba(231, 76, 60, .14); border-color: rgba(231, 76, 60, .35); }
+    .start { background: rgba(52, 152, 219, .14); border-color: rgba(52, 152, 219, .35); }
+    .hint { font-size: 13px; color: var(--muted); line-height: 1.4; }
+    .rules { display:grid; gap: 8px; font-size: 13px; color: var(--text); }
+    .rules b { color: #fff; }
+    .pill { display:inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); font-size:12px; color: var(--muted); }
+    .log { height: 180px; overflow:auto; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.18); font-size: 12px; color: #d7defd; }
+    .log .ok { color:#7CFFB2; }
+    .log .bad { color:#FF8A80; }
+    .log .info { color:#9DB3FF; }
+    footer { color: var(--muted); font-size: 12px; text-align:center; padding: 6px 0 2px; }
+    @media (max-width: 720px) {
+      .topbar { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Payment Hero: Approve ✅ or Block 🛑</h1>
+        <div class="sub">
+          You’re the “computer brain” that helps payments go through <b>fast</b> and <b>safe</b>.<br/>
+          Click payments to inspect them, then choose Approve or Block before time runs out!
+        </div>
+      </div>
+      <div class="panel" style="min-width:220px;">
+        <div class="hint">
+          <span class="pill">Mouse</span> Left-click = Approve • Right-click = Block • Space = Start/Pause
+        </div>
+      </div>
+    </header>
+
+    <div class="panel topbar">
+      <div class="stat"><div class="label">Score</div><div class="value" id="score">0</div></div>
+      <div class="stat"><div class="label">Streak</div><div class="value" id="streak">0</div></div>
+      <div class="stat"><div class="label">Lives</div><div class="value" id="lives">3</div></div>
+      <div class="stat"><div class="label">Level</div><div class="value" id="level">1</div></div>
+    </div>
+
+    <div class="row">
+      <div class="game panel">
+        <canvas id="c" width="900" height="520" aria-label="game canvas"></canvas>
+        <div class="controls" style="margin-top:12px;">
+          <button class="start" id="startBtn">▶ Start</button>
+          <button class="approve" id="approveBtn" disabled>✅ Approve</button>
+          <button class="block" id="blockBtn" disabled>🛑 Block</button>
+          <button id="resetBtn">↻ Reset</button>
+        </div>
+        <div class="hint" style="margin-top:8px;">
+          Tip: If you don’t decide in time, the payment “times out” and you lose a life.
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="panel">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap: 10px;">
+            <div style="font-weight:800;">How to decide</div>
+            <span class="pill">Kid-friendly “rules”</span>
+          </div>
+          <div class="rules" style="margin-top:8px;">
+            <div>✅ Approve if it looks <b>normal</b>: small-ish amount, normal place, normal speed.</div>
+            <div>🛑 Block if it looks <b>suspicious</b>:</div>
+            <div style="margin-left:14px;">• super big amount 💰💰💰</div>
+            <div style="margin-left:14px;">• weird location 🌍</div>
+            <div style="margin-left:14px;">• too many tries really fast ⚡</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap: 10px;">
+            <div style="font-weight:800;">Inspector</div>
+            <span class="pill">Click a payment</span>
+          </div>
+          <div class="hint" id="inspector" style="margin-top:8px;">
+            Click a flying payment bubble to inspect it.
+          </div>
+        </div>
+
+        <div class="panel">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap: 10px;">
+            <div style="font-weight:800;">Activity Log</div>
+            <span class="pill">what happened</span>
+          </div>
+          <div class="log" id="log" style="margin-top:8px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>Made for Career Day — show them that engineering is solving fun puzzles that help real people.</footer>
+  </div>
+
+<script>
+(() => {
+  // ===== Utilities =====
+  const rnd = (min, max) => Math.random() * (max - min) + min;
+  const pick = (arr) => arr[(Math.random() * arr.length) | 0];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  // ===== DOM =====
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const streakEl = document.getElementById('streak');
+  const livesEl = document.getElementById('lives');
+  const levelEl = document.getElementById('level');
+  const inspectorEl = document.getElementById('inspector');
+  const logEl = document.getElementById('log');
+
+  const startBtn = document.getElementById('startBtn');
+  const approveBtn = document.getElementById('approveBtn');
+  const blockBtn = document.getElementById('blockBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  // ===== Game state =====
+  const places = ["Toy Store", "Pizza Shop", "Game Shop", "Book Fair", "Candy Store", "Ice Cream", "Bike Shop"];
+  const weirdPlaces = ["Moon Mall", "Underwater Shop", "Dino Market", "Mystery Cave", "Alien Arcade"];
+  const items = ["Legos", "Pizza", "Headphones", "Shoes", "Backpack", "Skateboard", "Video Game"];
+  const emojis = ["🧸","🍕","🎮","📚","🍭","🍦","🚲","🎧","👟","🎒"];
+
+  let running = false;
+  let lastT = 0;
+  let spawnTimer = 0;
+
+  let score = 0;
+  let streak = 0;
+  let lives = 3;
+  let level = 1;
+
+  let selected = null; // payment object reference
+  let payments = [];
+
+  // Difficulty scaling
+  const diff = () => ({
+    //spawnEvery: clamp(1.2 - (level-1)*0.08, 0.55, 1.2),  // seconds
+    spawnEvery: clamp(2.6 - (level-1)*0.15, 1.4, 2.6),
+    //speed: clamp(80 + (level-1)*10, 80, 200),            // px/s base
+    speed: clamp(60 + (level-1)*6, 60, 140),
+    //ttl: clamp(6.0 - (level-1)*0.25, 3.0, 6.0),          // seconds before timeout
+    ttl: 20.0 - (level),
+    fraudChance: clamp(0.22 + (level-1)*0.02, 0.22, 0.38)
+  });
+
+  function setUI() {
+    scoreEl.textContent = score;
+    streakEl.textContent = streak;
+    livesEl.textContent = lives;
+    levelEl.textContent = level;
+    approveBtn.disabled = !selected || !running;
+    blockBtn.disabled = !selected || !running;
+    startBtn.textContent = running ? "⏸ Pause" : "▶ Start";
+  }
+
+  function log(msg, cls="info") {
+    const line = document.createElement('div');
+    line.className = cls;
+    line.textContent = msg;
+    logEl.prepend(line);
+  }
+
+  function reset() {
+    running = false;
+    lastT = 0;
+    spawnTimer = 0;
+    score = 0;
+    streak = 0;
+    lives = 3;
+    level = 1;
+    selected = null;
+    payments = [];
+    inspectorEl.textContent = "Click a flying payment bubble to inspect it.";
+    logEl.innerHTML = "";
+    log("Reset complete. Press Start!", "info");
+    setUI();
+    draw();
+  }
+
+  // ===== Payment generation =====
+  function makePayment() {
+    const d = diff();
+    const isFraud = Math.random() < d.fraudChance;
+
+    // "Signals"
+    const amount = isFraud
+      ? pick([rnd(250, 600), rnd(700, 1200)]) // big
+      : pick([rnd(3, 20), rnd(10, 45), rnd(25, 90)]);
+
+    const location = isFraud ? pick(weirdPlaces) : pick(places);
+    const tries = isFraud ? pick([3,4,5]) : pick([1,1,1,2]); // mostly 1
+    const item = pick(items);
+    const icon = pick(emojis);
+
+    // bubble physics
+    const r = rnd(26, 38);
+    const y = rnd(80, canvas.height - 80);
+    const x = -r - rnd(0, 140);
+    const speed = d.speed * rnd(0.85, 1.25);
+
+    const p = {
+      id: crypto.randomUUID?.() ?? String(Math.random()),
+      x, y, r,
+      vx: speed,
+      ttl: d.ttl,
+      age: 0,
+      isFraud,
+      amount: Math.round(amount),
+      location,
+      tries,
+      item,
+      icon,
+      judged: false
+    };
+    return p;
+  }
+
+  // Simple "rule explanation" for kids
+  function whySuspicious(p) {
+    const reasons = [];
+    if (p.amount >= 250) reasons.push("big amount 💰");
+    if (weirdPlaces.includes(p.location)) reasons.push("weird place 🌍");
+    if (p.tries >= 3) reasons.push("too many tries ⚡");
+    if (reasons.length === 0) return "looks normal ✅";
+    return reasons.join(", ");
+  }
+
+  // ===== Input handling =====
+  function pickPaymentAt(mx, my) {
+    // Choose topmost closest bubble
+    let best = null;
+    let bestD = Infinity;
+    for (const p of payments) {
+      const dx = mx - p.x, dy = my - p.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist <= p.r && dist < bestD) {
+        best = p; bestD = dist;
+      }
+    }
+    return best;
+  }
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+canvas.addEventListener('mousedown', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+  const p = pickPaymentAt(mx, my);
+  if (!p) return;
+
+  // LEFT CLICK → SELECT or APPROVE
+  if (e.button === 0) {
+    if (!selected || selected.id !== p.id) {
+      // First left-click selects & inspects
+      selected = p;
+      inspectorEl.innerHTML =
+        `<div><b>${p.icon} Payment</b></div>
+         <div class="hint" style="margin-top:6px;">
+           Item: <b>${p.item}</b><br/>
+           Amount: <b>$${p.amount}</b><br/>
+           Place: <b>${p.location}</b><br/>
+           Tries: <b>${p.tries}</b><br/>
+           Suspicion: <b>${whySuspicious(p)}</b><br/>
+           <span class="pill">Left-click = Approve • Right-click = Block</span>
+         </div>`;
+      setUI();
+    } else {
+      // Second left-click approves
+      judge("approve");
+    }
+  }
+
+  // RIGHT CLICK → BLOCK
+  if (e.button === 2) {
+    selected = p;
+    judge("block");
+  }
+});
+
+
+  function judge(action) {
+    if (!running || !selected || selected.judged) return;
+
+    selected.judged = true;
+    const correct = (action === "block") ? selected.isFraud : !selected.isFraud;
+
+    if (correct) {
+      streak += 1;
+      const bonus = 10 + Math.min(20, streak * 2);
+      score += bonus;
+      log(`✅ Correct! You chose ${action.toUpperCase()} (+${bonus})`, "ok");
+
+      // level up every 120 points (scaled fun)
+      const newLevel = 1 + Math.floor(score / 120);
+      if (newLevel !== level) {
+        level = newLevel;
+        log(`⭐ Level up! Now Level ${level} (faster + trickier!)`, "info");
+      }
+    } else {
+      streak = 0;
+      lives -= 1;
+      log(`❌ Oops! That was ${selected.isFraud ? "SUSPICIOUS" : "SAFE"} — you chose ${action.toUpperCase()} (−1 life)`, "bad");
+      if (lives <= 0) {
+        running = false;
+        log("🛑 Game Over! Hit Reset to try again.", "bad");
+      }
+    }
+
+    // Remove judged payment after a quick moment
+    const removeId = selected.id;
+    selected = null;
+    setUI();
+    setTimeout(() => {
+      payments = payments.filter(p => p.id !== removeId);
+    }, 220);
+  }
+
+  approveBtn.addEventListener('click', () => judge("approve"));
+  blockBtn.addEventListener('click', () => judge("block"));
+
+  document.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === ' ' ) { e.preventDefault(); toggleRun(); }
+    if (k === 'a') judge("approve");
+    if (k === 'b') judge("block");
+  });
+
+  // ===== Game loop =====
+  function toggleRun() {
+    if (lives <= 0) return;
+    running = !running;
+    setUI();
+    if (running) log("▶ Started! Click a bubble, then Approve or Block.", "info");
+    else log("⏸ Paused.", "info");
+  }
+
+  startBtn.addEventListener('click', toggleRun);
+  resetBtn.addEventListener('click', reset);
+
+  function update(dt) {
+    const d = diff();
+    spawnTimer += dt;
+
+    while (spawnTimer >= d.spawnEvery) {
+      spawnTimer -= d.spawnEvery;
+      payments.push(makePayment());
+    }
+
+    for (const p of payments) {
+      p.x += p.vx * dt;
+      p.age += dt;
+
+      // Timeout if it crosses end or lives in system too long
+      if (!p.judged && (p.age >= p.ttl || p.x - p.r > canvas.width + 20)) {
+        p.judged = true;
+        streak = 0;
+        lives -= 1;
+        log(`⏱️ Timeout! A payment waited too long (−1 life).`, "bad");
+
+        // If the selected one timed out, clear it
+        if (selected && selected.id === p.id) {
+          selected = null;
+          inspectorEl.textContent = "That one timed out. Click another bubble!";
+        }
+
+        if (lives <= 0) {
+          running = false;
+          log("🛑 Game Over! Hit Reset to try again.", "bad");
+        }
+      }
+    }
+
+    // Remove judged/expired ones that moved past the screen
+    payments = payments.filter(p => !(p.judged && p.x - p.r > canvas.width + 60));
+
+    setUI();
+  }
+
+  // ===== Drawing =====
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Background grid
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1;
+    for (let x=40; x<canvas.width; x+=60) {
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+    }
+    for (let y=40; y<canvas.height; y+=60) {
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+    }
+    ctx.restore();
+
+    // Title hints on canvas
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,.85)";
+    ctx.font = "700 18px system-ui, sans-serif";
+    ctx.fillText("Click a payment bubble to inspect it → then Approve or Block!", 18, 32);
+    ctx.fillStyle = "rgba(255,255,255,.65)";
+    ctx.font = "500 13px system-ui, sans-serif";
+    ctx.fillText("Goal: keep things FAST (no timeouts) and SAFE (block suspicious).", 18, 54);
+    ctx.restore();
+
+    // Draw "finish lane"
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(canvas.width - 12, 0, 12, canvas.height);
+    ctx.restore();
+
+    // Payments
+    for (const p of payments) {
+      const isSel = selected && selected.id === p.id;
+
+      // Bubble
+      ctx.save();
+      // Color based on judged or selected
+      if (p.judged) ctx.globalAlpha = 0.35;
+      else ctx.globalAlpha = 0.95;
+
+      // Ring highlight
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r + (isSel ? 6 : 0), 0, Math.PI*2);
+      ctx.strokeStyle = isSel ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.2)";
+      ctx.lineWidth = isSel ? 4 : 2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = "rgba(255,255,255,.10)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,.25)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Emoji icon
+      ctx.font = `700 ${Math.floor(p.r*0.9)}px system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "rgba(255,255,255,.95)";
+      ctx.fillText(p.icon, p.x, p.y - 2);
+
+      // Time left bar
+      const left = clamp(1 - (p.age / p.ttl), 0, 1);
+      const barW = p.r * 2;
+      const barH = 6;
+      const bx = p.x - p.r;
+      const by = p.y + p.r + 8;
+
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = "rgba(255,255,255,.18)";
+      ctx.fillRect(bx, by, barW, barH);
+      ctx.fillStyle = left > 0.35 ? "rgba(46, 204, 113, .85)" : "rgba(231, 76, 60, .85)";
+      ctx.fillRect(bx, by, barW * left, barH);
+
+      // Mini amount text
+      ctx.globalAlpha = 0.9;
+      ctx.font = "700 12px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,.90)";
+      ctx.fillText(`$${p.amount}`, p.x, by + 16);
+
+      ctx.restore();
+    }
+
+    // If not running, show overlay
+    if (!running) {
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "rgba(255,255,255,.95)";
+      ctx.font = "800 34px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(lives <= 0 ? "GAME OVER" : "PAUSED", canvas.width/2, canvas.height/2 - 20);
+      ctx.font = "600 16px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,.78)";
+      ctx.fillText("Press Start (or Space) to play. Click a bubble to inspect.", canvas.width/2, canvas.height/2 + 18);
+      ctx.restore();
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  function tick(t) {
+    if (!lastT) lastT = t;
+    const dt = (t - lastT) / 1000;
+    lastT = t;
+    if (running) update(clamp(dt, 0, 0.05));
+    requestAnimationFrame(tick);
+  }
+
+  // ===== Start =====
+  reset();
+  requestAnimationFrame(draw);
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

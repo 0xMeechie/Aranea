@@ -36,6 +36,10 @@
             .url = "https://github.com/xcaeser/zli/archive/v4.3.0.tar.gz",
             .hash = "zli-4.3.0-LeUjpmbfAACPnRj2nzbzaLMNfTkq-LEWSC9EfOcnFxjl",
         },
+        .logly = .{
+            .url = "https://github.com/muhammad-fiaz/logly.zig/archive/refs/tags/0.1.6.tar.gz",
+            .hash = "logly-0.1.6-kZjLexxIEgCMOhBA3f1bx3lzP-JrTZDAfcYc7vVrtbzV",
+        },
     },
     .paths = .{
         "build.zig",

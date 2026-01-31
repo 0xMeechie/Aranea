@@ -1,0 +1,37 @@
+Task Name,Description,Section,Assignee,Due Date,Notes
+FEATURE: Node Initialization,Create a secure and auditable node via CLI,Feature 1 - Node Initialization,,,"Goal: aether init creates identity, config, audit log"
+
+Initialize directory layout,Create data/config/identity/audit directories if missing,Feature 1 - Node Initialization,,,"Idempotent; do not overwrite existing data"
+Generate node keypair,Generate Ed25519 keypair and derive node_id,Feature 1 - Node Initialization,,,"node_id = sha256(public_key); never regenerate if exists"
+Write identity file atomically,Persist identity.json using atomic write and strict permissions,Feature 1 - Node Initialization,,,"Use temp file + fsync + rename; perms 0600"
+Write config file atomically,Create default config.json with audit settings,Feature 1 - Node Initialization,,,"No secrets; atomic write"
+Create initial audit segment,Create audit-000001.ael with valid segment header,Feature 1 - Node Initialization,,,"Header must be written before any events"
+Emit NODE_INIT audit event,Append first audit event anchoring node trust,Feature 1 - Node Initialization,,,"seq=1; prev_hash=zero_hash; must verify"
+
+FEATURE: Node Status,Inspect node identity and audit health,Feature 2 - Node Status,,,"Goal: aether status reports trust + health"
+
+Load identity and config,Read and display identity/config information,Feature 2 - Node Status,,,"Fail clearly if missing"
+Quick audit health check,Inspect headers and last audit record,Feature 2 - Node Status,,,"Verify signature + prev_hash only (fast)"
+
+FEATURE: Audit Verification,Offline proof of audit integrity,Feature 3 - Audit Verification,,,"Goal: prove logs untampered"
+
+Implement full audit verifier,Stream verify all audit segments and records,Feature 3 - Audit Verification,,,"Check seq, hash chain, payload hash, signatures"
+Implement CLI exit codes,Return correct exit codes for OK/WARN/FAIL,Feature 3 - Audit Verification,,,"0=OK,2=FAIL,3=WARN; --strict flips WARN to FAIL"
+
+FEATURE: Manual Audit Emission,Developer tooling to test audit pipeline,Feature 4 - Manual Audit Emission,,,"Goal: emit events without daemon"
+
+Emit audit event from CLI,Create and append signed audit event from CLI,Feature 4 - Manual Audit Emission,,,"Validate kind; seq+prev_hash must be correct"
+
+FEATURE: Node Daemon Lifecycle,Auditable daemon start/stop,Feature 5 - Node Daemon Lifecycle,,,"Goal: lifecycle events are logged"
+
+Start daemon and emit NODE_START,Start aetherd and append audit event,Feature 5 - Node Daemon Lifecycle,,,"Fail if audit write fails"
+Handle shutdown and emit NODE_STOP,Append stop event on SIGINT/SIGTERM,Feature 5 - Node Daemon Lifecycle,,,"Ensure fsync before exit"
+
+FEATURE: Audit Enforcement Rule,Prevent unaudited side effects,Feature 6 - Audit Enforcement,,,"Goal: no side effects without audit"
+
+Introduce AuditContext abstraction,All side-effecting actions require audit context,Feature 6 - Audit Enforcement,,,"Fail fast if audit write fails"
+
+FEATURE: Audit Tail (Optional),Human-readable recent event inspection,Feature 7 - Audit Tail,,,"Optional but useful"
+
+Tail recent audit events,Read and display last N events with filters,Feature 7 - Audit Tail,,,"Mark output as unverified"
+

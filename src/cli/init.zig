@@ -2,32 +2,47 @@ const std = @import("std");
 const Writer = std.Io.Writer;
 const Reader = std.Io.Reader;
 const zli = @import("zli");
+const logly = @import("logly");
 
 const config = @import("../node/config.zig");
 
+const force_flag = zli.Flag{
+    .name = "force",
+    .shortcut = "f",
+    .description = "force the creation of new keys for the initialized node. This is used to Overwrite all previous generated configs",
+    .type = .Bool,
+    .default_value = .{ .Bool = false },
+};
+
 pub fn register(writer: *Writer, reader: *Reader, allocator: std.mem.Allocator) !*zli.Command {
-    return zli.Command.init(writer, reader, allocator, .{
+    const cmd = try zli.Command.init(writer, reader, allocator, .{
         .name = "init",
         .shortcut = "i",
         .description = "initialize the node",
     }, initNode);
+
+    try cmd.addFlag(force_flag);
+    return cmd;
 }
 
 fn initNode(ctx: zli.CommandContext) !void {
-    var nc = config.nodeConfig.init(ctx.allocator);
+    // check to see if the config and identity file exist
+    // if it doesn't create it.
+    // if it does there's nothing to do
+    // if force is enabled then rewrite the config and identity files
+    var logger = try logly.Logger.init(ctx.allocator);
+    var lConfig = logly.Config.default();
+    lConfig.level = .debug;
+    defer logger.deinit();
+    logger.configure(lConfig);
+    try logger.info("the node is initializing", @src());
+    var nc = try config.config.init(ctx.allocator, logger);
     defer nc.deinit();
+    const forcedEnabled = ctx.flag("force", bool);
 
-    const cp = "/mypath/sodapoppin";
-    std.debug.print("config path is null \n", .{});
-    try nc.updateConfigPath(cp);
+    // if forcedEnabled we will rewrite the current configs and Init a new node config. If disabled we will only create
+    // the initial node config. If we init again ignore any work that needs to be done.
+    try nc.initNodeConfig(forcedEnabled);
 
-    std.debug.print("new config path is {s} \n", .{nc.configPath.?});
-
-    config.initConfig(ctx.allocator) catch |err| {
-        if (err == config.configError.HomeNotSet) {
-            std.debug.print("$HOME is not set. Please set it and try again", .{});
-            return;
-        }
-    };
-    try ctx.writer.print("the node is initializing \n", .{});
+    try logger.info("the node is initialized successfully \n", @src());
 }

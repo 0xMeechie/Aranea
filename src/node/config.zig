@@ -56,6 +56,8 @@ pub const config = struct {
         return .{ .configPath = configPath{ .path = configDir }, .allocator = allocator, .logger = logger };
     }
 
+    pub fn nodeID() void {}
+
     fn createThermoDirectories(self: *config) !void {
         const idDir = try std.mem.concat(self.allocator, u8, &.{ self.currentConfigPath(), "/identity" });
         const configDir = try std.mem.concat(self.allocator, u8, &.{ self.currentConfigPath(), "/config" });
@@ -89,6 +91,85 @@ pub const config = struct {
     pub fn configPathsExist(self: *config) bool {
         const homeDir = std.process.getEnvVarOwned(self.allocator, "HOME") catch return configError.HomeNotSet;
         defer self.allocator.free(homeDir);
+    }
+
+    pub fn doesIdentityFileExist(self: *config) !bool {
+        const idPath = try self.identityFilePath();
+        defer self.allocator.free(idPath);
+        fs.cwd().access(idPath, .{}) catch |err| {
+            if (err == fs.Dir.AccessError.FileNotFound) {
+                return false;
+            }
+        };
+        return true;
+    }
+
+    pub fn doesConfigFileExist(self: *config) !bool {
+        const cfgFilePath = try self.configFilePath();
+        defer self.allocator.free(cfgFilePath);
+        fs.cwd().access(cfgFilePath, .{}) catch |err| {
+            if (err == fs.Dir.AccessError.FileNotFound) {
+                return false;
+            }
+        };
+        return true;
+    }
+
+    // confirms that the required configs are valid.
+    pub fn isValid(self: *config) !bool {
+        const idIsValid = try self.identityFileIsValid();
+
+        if (!idIsValid) {
+            return false;
+        }
+
+        const configIsValid = try self.configFileIsValid();
+
+        if (!configIsValid) {
+            return false;
+        }
+
+        return true;
+    }
+
+    pub fn nodeNamme(self: *config) ![]const u8 {
+        const idFile = try self.identityFilePath();
+        defer self.allocator.free(idFile);
+        // make a buffer the size of the file
+        const max_bytes: usize = 1024 * 1024; // 1 MiB (tune as needed)
+        var buffer: [max_bytes]u8 = undefined;
+        const fileData = try fs.cwd().readFile(idFile, &buffer);
+        var parsedData = try json.parseFromSlice(identityData, self.allocator, fileData, .{ .ignore_unknown_fields = true });
+        defer parsedData.deinit();
+        const node_name = try self.allocator.dupe(u8, parsedData.value.node_name);
+
+        return node_name;
+    }
+
+    fn identityFileIsValid(self: *config) !bool {
+        const idPath = try self.identityFilePath();
+        defer self.allocator.free(idPath);
+        // make a buffer the size of the file
+        const max_bytes: usize = 1024 * 1024; // 1 MiB (tune as needed)
+        var buffer: [max_bytes]u8 = undefined;
+        const fileData = try fs.cwd().readFile(idPath, &buffer);
+        var parsedData = try json.parseFromSlice(identityData, self.allocator, fileData, .{ .ignore_unknown_fields = true });
+        defer parsedData.deinit();
+
+        return validIdentityFile(parsedData.value);
+    }
+
+    fn configFileIsValid(self: *config) !bool {
+        const cfgpath = try self.configFilePath();
+        defer self.allocator.free(cfgpath);
+        // make a buffer the size of the file
+        const max_bytes: usize = 1024 * 1024; // 1 MiB (tune as needed)
+        var buffer: [max_bytes]u8 = undefined;
+        const fileData = try fs.cwd().readFile(cfgpath, &buffer);
+        var parsedData = try json.parseFromSlice(configData, self.allocator, fileData, .{ .ignore_unknown_fields = true });
+        defer parsedData.deinit();
+
+        return validConfigFile(parsedData.value);
     }
 
     pub fn initNodeConfig(self: *config, forceInit: bool) !void {
@@ -247,3 +328,49 @@ pub const config = struct {
         self.allocator.free(self.configPath.path);
     }
 };
+
+fn validConfigFile(configFile: configData) bool {
+    if (configFile.audit_dir.len == 0) {
+        return false;
+    }
+
+    if (configFile.config_dir.len == 0) {
+        return false;
+    }
+
+    if (configFile.config_file.len == 0) {
+        return false;
+    }
+
+    if (configFile.identity_file.len == 0) {
+        return false;
+    }
+    if (configFile.version != CONFIG_VERSION) {
+        return false;
+    }
+
+    return true;
+}
+
+fn validIdentityFile(idFile: identityData) bool {
+    if (idFile.private_key.len == 0) {
+        return false;
+    }
+
+    if (idFile.public_key.len == 0) {
+        return false;
+    }
+
+    if (idFile.node_name.len == 0) {
+        return false;
+    }
+
+    if (idFile.created_at <= 0) {
+        return false;
+    }
+
+    if (idFile.version != CONFIG_VERSION) {
+        return false;
+    }
+    return true;
+}

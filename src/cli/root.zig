@@ -8,6 +8,7 @@ const ping = @import("ping.zig");
 const id = @import("id.zig");
 const init = @import("init.zig");
 const serve = @import("serve.zig");
+const status = @import("status.zig");
 
 pub fn build(writer: *Writer, reader: *Reader, allocator: std.mem.Allocator) !*zli.Command {
     const root = try zli.Command.init(writer, reader, allocator, .{
@@ -22,6 +23,7 @@ pub fn build(writer: *Writer, reader: *Reader, allocator: std.mem.Allocator) !*z
         try ping.register(writer, reader, allocator),
         try init.register(writer, reader, allocator),
         try serve.register(writer, reader, allocator),
+        try status.register(writer, reader, allocator),
     });
 
     return root;

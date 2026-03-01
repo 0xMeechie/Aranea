@@ -4,7 +4,7 @@ const Reader = std.Io.Reader;
 const zli = @import("zli");
 const logly = @import("logly");
 
-const config = @import("../node/config.zig");
+const config = @import("config");
 
 const force_flag = zli.Flag{
     .name = "force",

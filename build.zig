@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
     const zli_dep = b.dependency("zli", .{ .target = target, .optimize = optimize });
 
     const exe = b.addExecutable(.{
-        .name = "Thermosphere",
+        .name = "Aranea",
         .root_module = b.createModule(.{
             // b.createModule defines a new module just like b.addModule but,
             // unlike b.addModule, it does not expose the module to consumers of

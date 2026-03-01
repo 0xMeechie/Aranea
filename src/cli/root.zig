@@ -9,11 +9,12 @@ const id = @import("id.zig");
 const init = @import("init.zig");
 const serve = @import("serve.zig");
 const status = @import("status.zig");
+const audit = @import("audit.zig");
 
 pub fn build(writer: *Writer, reader: *Reader, allocator: std.mem.Allocator) !*zli.Command {
     const root = try zli.Command.init(writer, reader, allocator, .{
-        .name = "thermosphere",
-        .description = "thermosphere is a cli tool for interacting with nodes",
+        .name = "aranea",
+        .description = "aranea is a cli tool for interacting with nodes",
         .version = .{ .major = 0, .minor = 0, .patch = 1, .pre = null, .build = null },
     }, showHelp);
 
@@ -24,6 +25,7 @@ pub fn build(writer: *Writer, reader: *Reader, allocator: std.mem.Allocator) !*z
         try init.register(writer, reader, allocator),
         try serve.register(writer, reader, allocator),
         try status.register(writer, reader, allocator),
+        try audit.register(writer, reader, allocator),
     });
 
     return root;

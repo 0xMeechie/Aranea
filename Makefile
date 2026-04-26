@@ -1,29 +1,22 @@
 GO      := go
 BIN_DIR := bin
 
-.PHONY: all build cli gateway runtime clean fmt tidy test install
+.PHONY: all build cli runtime clean fmt tidy test install run-cli run-runtime
 
 all: build
 
-build: cli gateway runtime
+build: cli runtime
 
 cli:
 	@mkdir -p $(BIN_DIR)
-	$(GO) build -o $(BIN_DIR)/aranea ./src/cmd/araneacli
-
-gateway:
-	@mkdir -p $(BIN_DIR)
-	$(GO) build -o $(BIN_DIR)/aranea-gateway ./src/cmd/gateway
+	$(GO) build -o $(BIN_DIR)/aranea ./cmd/aranea
 
 runtime:
 	@mkdir -p $(BIN_DIR)
-	$(GO) build -o $(BIN_DIR)/aranead ./src/cmd/aranead
+	$(GO) build -o $(BIN_DIR)/aranead ./cmd/aranead
 
 run-cli: cli
 	./$(BIN_DIR)/aranea
-
-run-gateway: gateway
-	./$(BIN_DIR)/aranea-gateway
 
 run-runtime: runtime
 	./$(BIN_DIR)/aranead
@@ -43,4 +36,3 @@ clean:
 install: build
 	cp $(BIN_DIR)/aranea /usr/local/bin/aranea
 	cp $(BIN_DIR)/aranead /usr/local/bin/aranead
-	cp $(BIN_DIR)/aranea-gateway /usr/local/bin/aranea-gateway

@@ -1,0 +1,48 @@
+agent:
+  id: research-agent
+  version: 0.1.0
+
+runtime:
+  endpoint: localhost:8473
+  failBehavior: closed
+
+policy:
+  defaultBehavior: deny
+  rules:
+    - tool: read_file
+      parameters:
+        paths:
+          - /tmp/workspace/**
+          - /tmp/workspace/data/**
+
+    - tool: write_file
+      parameters:
+        paths:
+          - /tmp/workspace/output/**
+
+    - tool: http_request
+      parameters:
+        domains:
+          - api.github.com
+          - httpbin.org
+        rateLimit: 10
+        allowedActions:
+          - GET
+          - POST
+
+    - tool: sql_command
+      parameters:
+        tables:
+          - Users
+          - Accounts
+        rateLimit: 10
+        allowedActions:
+          - SELECT
+          - INSERT
+          - COUNT
+          - UPDATE
+
+audit:
+  level: full
+  sign: true
+  syncTo: ./aranea-logs

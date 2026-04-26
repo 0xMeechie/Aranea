@@ -1,0 +1,33 @@
+# Aranea policy config for testagent
+#
+# Demonstrates allow vs deny:
+#   read_file  -> ALLOWED  (explicit rule, no path restriction)
+#   write_file -> ALLOWED  (explicit rule, no path restriction)
+#   http_request GET httpbin.org -> ALLOWED
+#   http_request POST or non-whitelisted domain -> DENIED
+#   run_command -> DENIED  (no rule; falls through to defaultBehavior: deny)
+
+agent:
+  id: testagent
+  version: "0.1.0"
+
+runtime:
+  failBehavior: open
+
+policy:
+  defaultBehavior: deny
+  rules:
+    - tool: read_file
+
+    - tool: write_file
+
+    - tool: http_request
+      parameters:
+        domains:
+          - "httpbin.org"
+        allowedActions:
+          - "GET"
+
+audit:
+  level: full
+  sign: false

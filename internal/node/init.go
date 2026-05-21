@@ -19,6 +19,7 @@ const (
 	DefaultIdentityFile    = "identity.json"
 	DefaultConfigDirectory = ".config/aranea"
 	DefaultKeyDirectory    = "keys"
+	DefaultLogDirectory    = "logs"
 )
 
 type InitConfig struct {
@@ -48,12 +49,14 @@ func Load(config InitConfig) (*NodeConfig, *NodeIdentity, error) {
 	slog.Info(fmt.Sprintf("using config path %s ", configLocation))
 
 	keyDir := filepath.Join(configLocation, DefaultKeyDirectory)
+	logDir := filepath.Join(configLocation, DefaultLogDirectory)
 
 	cfg, err := ReadConfigFile(cfgFilePath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("config file: %w", err)
 	}
 	cfg.keyDir = keyDir
+	cfg.logDir = logDir
 
 	id, err := ReadIdentityFile(idFilePath)
 	if err != nil {
@@ -96,7 +99,7 @@ func Init(config InitConfig) error {
 
 	configLocation := filepath.Join(homeLocation, DefaultConfigDirectory)
 
-	mdErr := os.MkdirAll(configLocation, 0o666)
+	mdErr := os.MkdirAll(configLocation, 0o700)
 	if mdErr != nil {
 		return fmt.Errorf("error creating directory %s", mdErr)
 	}
@@ -141,6 +144,7 @@ func Init(config InitConfig) error {
 		ConfigFile:   cfgFilePath,
 		LogLevel:     "debug",
 		keyDir:       keyDir,
+		logDir:       filepath.Join(configLocation, DefaultLogDirectory),
 	}
 
 	err = cfgFileData.WriteFile()

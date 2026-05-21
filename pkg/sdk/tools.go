@@ -100,9 +100,9 @@ func (ts *ToolSet) RunCommand(command string) (string, error) {
 	if err := ts.evaluate("run_command", "run", command, nil); err != nil {
 		return "", err
 	}
-	out, err := exec.Command("sh", "-c", command).Output()
+	out, err := exec.Command("sh", "-c", command).CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("run command: %w", err)
+		return string(out), fmt.Errorf("run command: %w: %s", err, strings.TrimSpace(string(out)))
 	}
 	return string(out), nil
 }

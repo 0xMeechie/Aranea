@@ -5,24 +5,50 @@ import (
 	"fmt"
 
 	"github.com/0xMeechie/Aranea/pkg/config"
-	"github.com/0xMeechie/Aranea/pkg/runtime"
+)
+
+const (
+	defaultAraneaEndpoint = "http://127.0.0.1:8080"
 )
 
 // Agent is the top-level handle used by agent code to interact with Aranea.
-type Agent struct {
-	cfg   config.AgentConfig
-	rt    *runtime.Runtime
-	Tools ToolSet
+type AraneaClient struct {
+	client *HTTPClient
 }
 
-// Init validates cfg, creates the runtime, and returns a ready Agent.
-func Init(cfg config.AgentConfig) (*Agent, error) {
-	return nil, nil
+type ClientConfig struct {
+	// Endpoint will default to the managed Aranea servers. If self hosted
+	// enter the endpoint to where the Aranea runtime is running
+	Endpoint string
+}
+
+type AraneaAgent struct{}
+
+// Init validates cfg, and returns a ready Aranea Agent.
+func Init(cfg ClientConfig) (*AraneaClient, error) {
+	var endpoint string
+	if cfg.Endpoint == "" {
+		endpoint = defaultAraneaEndpoint
+	} else {
+		endpoint = cfg.Endpoint
+	}
+
+	sc, _, err := client.Fetch("GET", endpoint+"/healthz", "")
+	if err != nil {
+		return &AraneaClient{}, fmt.Errorf("error initializing connection %w", err)
+	}
+
+	if sc != 200 {
+		return &AraneaClient{}, fmt.Errorf("unable to reach aranea endpoint")
+	}
+	return &AraneaClient{
+		client: client,
+	}, nil
 }
 
 // InitFromFile loads the agent config from path and calls Init.
 // Path is always required — no fallback or discovery is performed.
-func InitFromFile(path string) (*Agent, error) {
+func InitFromFile(path string) (*AraneaClient, error) {
 	if path == "" {
 		return nil, fmt.Errorf("config path is required")
 	}
@@ -36,8 +62,5 @@ func InitFromFile(path string) (*Agent, error) {
 }
 
 // Shutdown flushes any pending log writes and releases runtime resources.
-func (a *Agent) Shutdown() {
-	if a.rt != nil {
-		_ = a.rt.Close()
-	}
+func (a *AraneaClient) Shutdown() {
 }

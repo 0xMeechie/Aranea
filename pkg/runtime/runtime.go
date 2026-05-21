@@ -4,17 +4,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/0xMeechie/Aranea/pkg/audit"
 	"github.com/0xMeechie/Aranea/pkg/config"
 	"github.com/0xMeechie/Aranea/pkg/policy"
 )
-
-const araneaDir = ".aranea"
 
 type Runtime struct {
 	cfg      map[string]*config.AgentConfig
@@ -44,19 +39,26 @@ type ToolCallRequest struct {
 
 // New wires up the Runtime from the given agent config.
 // It initialises the policy engine, audit log, key pair, and node ID.
-func New(nodeID string, keys policy.KeyPair) (*Runtime, error) {
+func New(nodeID string, keys policy.KeyPair, logDir string) (*Runtime, error) {
 	cfgs := make(map[string]*config.AgentConfig)
 	pe := policy.NewPolicyEngine(cfgs)
 
+	log, err := audit.NewLog(logDir, nodeID)
+	if err != nil {
+		return nil, fmt.Errorf("open audit log: %w", err)
+	}
+
 	return &Runtime{
-		engine: pe,
-		cfg:    cfgs,
-		key:    &keys,
-		nodeID: nodeID,
+		engine:   pe,
+		cfg:      cfgs,
+		auditLog: log,
+		key:      &keys,
+		nodeID:   nodeID,
 	}, nil
 }
 
 func (r *Runtime) AddAgent(cfg *config.AgentConfig) {
+	r.cfg[cfg.AgentConfig.ID] = cfg
 }
 
 func (r *Runtime) Sign(payload audit.Signable) (string, error) {
@@ -134,37 +136,4 @@ func generateEventID() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
-}
-
-// getOrCreateNodeID reads the node ID from .aranea/node-id.
-// If the file does not exist, a new random ID is generated and persisted.
-// Repeated calls return the same ID.
-func getOrCreateNodeID() (string, error) {
-	path := filepath.Join(araneaDir, "node-id")
-
-	data, err := os.ReadFile(path)
-	if err == nil {
-		if id := strings.TrimSpace(string(data)); id != "" {
-			return id, nil
-		}
-	}
-
-	if err != nil && !os.IsNotExist(err) {
-		return "", fmt.Errorf("read node-id: %w", err)
-	}
-
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		return "", fmt.Errorf("generate node-id: %w", err)
-	}
-	id := hex.EncodeToString(b)
-
-	if err := os.MkdirAll(araneaDir, 0o700); err != nil {
-		return "", fmt.Errorf("create .aranea dir: %w", err)
-	}
-	if err := os.WriteFile(path, []byte(id), 0o600); err != nil {
-		return "", fmt.Errorf("write node-id: %w", err)
-	}
-
-	return id, nil
 }

@@ -16,7 +16,7 @@ const (
 type NodeIdentity struct {
 	Version   uint      `json:"version"`
 	PublicKey string    `json:"publicKey"`
-	CreatedAt time.Time `json:"cratedAt"`
+	CreatedAt time.Time `json:"createdAt"`
 	NodeName  string    `json:"nodeName"`
 	keyPairs  policy.KeyPair
 }
@@ -24,7 +24,7 @@ type NodeIdentity struct {
 type NodeIdentityFactory struct {
 	Version   uint      `json:"version"`
 	PublicKey string    `json:"publicKey"`
-	CreatedAt time.Time `json:"cratedAt"`
+	CreatedAt time.Time `json:"createdAt"`
 	NodeName  string    `json:"nodeName"`
 }
 
@@ -56,7 +56,7 @@ func (ni *NodeIdentity) WriteFile(path string) error {
 		return fmt.Errorf("error marshalling id file %s", err)
 	}
 
-	err = os.WriteFile(path, idData, 0o666)
+	err = os.WriteFile(path, idData, 0o600)
 	if err != nil {
 		return fmt.Errorf("error writing id file %s", err)
 	}
@@ -70,10 +70,15 @@ type NodeConfig struct {
 	IdentityFile string `json:"identityFile"`
 	LogLevel     string `json:"logLevel"`
 	keyDir       string
+	logDir       string
 }
 
 func (nc NodeConfig) KeyDir() string {
 	return nc.keyDir
+}
+
+func (nc NodeConfig) LogDir() string {
+	return nc.logDir
 }
 
 func ReadConfigFile(path string) (*NodeConfig, error) {
@@ -94,7 +99,7 @@ func (ni *NodeConfig) WriteFile() error {
 		return fmt.Errorf("error marshalling config file %s", err)
 	}
 
-	err = os.WriteFile(ni.ConfigFile, cfgData, 0o666)
+	err = os.WriteFile(ni.ConfigFile, cfgData, 0o600)
 	if err != nil {
 		return fmt.Errorf("error writing config file %s", err)
 	}

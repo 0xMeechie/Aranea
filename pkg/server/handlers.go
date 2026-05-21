@@ -31,11 +31,22 @@ type EvaluateRequest struct {
 	ConversationTurn int            `json:"conversationTurn,omitempty"`
 }
 
+type RegisterAgentRequest struct {
+	AgentID          string         `json:"agentID"`
+	Tool             string         `json:"tool"`
+	Args             map[string]any `json:"args"`
+	PromptSummary    string         `json:"promptSummary,omitempty"`
+	ConversationTurn int            `json:"conversationTurn,omitempty"`
+}
+
 // EvaluateResponse mirrors policy.Decision for clients.
 type EvaluateResponse struct {
 	Action          string `json:"action"`
 	Reason          string `json:"reason"`
 	DeterminingRule string `json:"determiningRule,omitempty"`
+}
+
+func (s *Server) handleRegisterAgent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleEvaluate(w http.ResponseWriter, r *http.Request) {

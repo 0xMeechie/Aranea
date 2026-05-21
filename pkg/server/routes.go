@@ -10,6 +10,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /version", s.handleVersion)
 
 	s.HandleAuth("POST /v1/evaluate", http.HandlerFunc(s.handleEvaluate))
+	s.HandleAuth("POST /v1/agent", http.HandlerFunc(s.handleRegisterAgent))
 }
 
 // Handle registers an http.Handler on the underlying mux. Pattern follows

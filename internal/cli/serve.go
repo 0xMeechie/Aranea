@@ -30,7 +30,7 @@ func serveCmd() *cobra.Command {
 				return fmt.Errorf("load keys: %w", err)
 			}
 
-			rt, err := runtime.New(id.NodeName, *kp)
+			rt, err := runtime.New(id.NodeName, *kp, nodeConfig.LogDir())
 			if err != nil {
 				return fmt.Errorf("init runtime: %w", err)
 			}

@@ -78,7 +78,6 @@ func LoadConfigFromFile(filePath string) (AgentConfig, error) {
 	extType := filepath.Ext(filePath)
 	switch extType {
 	case ".yaml", ".yml":
-		fmt.Println("correct file type")
 	default:
 		return AgentConfig{}, fmt.Errorf("agent config file must be a yaml file. Got a %s instead", extType)
 	}
